@@ -1,0 +1,78 @@
+{
+  "common": {
+    "name": "husqvarna-automower-api",
+    "version": "0.1.0",
+    "news": {
+      "0.1.0": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "zh-cn": "首次出版"
+      }
+    },
+    "title": "Husqvarna Automower API",
+    "titleLang": {
+      "en": "Husqvarna Automower API",
+      "de": "Husqvarna Automower API",
+      "ru": "Husqvarna Automower API",
+      "pt": "API Husqvarna Automower",
+      "nl": "Husqvarna Automower API",
+      "fr": "API Husqvarna Automower",
+      "it": "API Husqvarna Automower",
+      "es": "Husqvarna Automower API",
+      "pl": "Husqvarna Automower API",
+      "zh-cn": "Husqvarna Automower API"
+    },
+    "desc": {
+      "en": "An adapter to use the Husyvarna API",
+      "de": "Ein Adapter zur Verwendung der Husyvarna-API",
+      "ru": "Адаптер для использования Husyvarna API",
+      "pt": "Um adaptador para usar a API Husyvarna",
+      "nl": "Een adapter om de Husyvarna API te gebruiken",
+      "fr": "Un adaptateur pour utiliser l'API Husyvarna",
+      "it": "Un adattatore per utilizzare l'API Husyvarna",
+      "es": "Un adaptador para usar la API Husyvarna",
+      "pl": "Adapter do korzystania z interfejsu API Husyvarna",
+      "zh-cn": "使用Husyvarna API的适配器"
+    },
+    "authors": [
+      "JauntyJosef <jauntyjosef@gmail.com>"
+    ],
+    "keywords": [
+      "ioBroker",
+      "template",
+      "Smart Home",
+      "home automation"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "main": "main.js",
+    "icon": "husqvarna-automower-api.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/JauntyJosef/ioBroker.husqvarna-automower-api/master/admin/husqvarna-automower-api.png",
+    "readme": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api/blob/master/README.md",
+    "loglevel": "info",
+    "mode": "daemon",
+    "type": "garden",
+    "compact": true,
+    "connectionType": "cloud",
+    "dataSource": "poll",
+    "materialize": true,
+    "dependencies": [
+      {
+        "js-controller": ">=1.4.2"
+      }
+    ],
+    "installedFrom": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api/tarball/6e95e74eaea831eb623e0071f6e996a5485799f4"
+  },
+  "native": {
+  },
+  "objects": [],
+  "instanceObjects": []
+}

@@ -1,0 +1,82 @@
+{
+  "_from": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api/tarball/394b4b88889b22dc33b4e4fe9e7587059e455045",
+  "_id": "iobroker.husqvarna-automower-api@0.1.0",
+  "_inBundle": false,
+  "_integrity": "sha512-gCzbmcNjMFd3onPLi6Ck8eLhukSZXQN61Dp7y4ucSODg+61a+Pcn269mbZK0SquYoo8jt1L272HO0Rn5YVr9dw==",
+  "_location": "/iobroker.husqvarna-automower-api",
+  "_phantomChildren": {
+    "@types/node": "13.13.5"
+  },
+  "_requested": {
+    "type": "remote",
+    "raw": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api/tarball/394b4b88889b22dc33b4e4fe9e7587059e455045",
+    "rawSpec": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api/tarball/394b4b88889b22dc33b4e4fe9e7587059e455045",
+    "saveSpec": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api/tarball/394b4b88889b22dc33b4e4fe9e7587059e455045",
+    "fetchSpec": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api/tarball/394b4b88889b22dc33b4e4fe9e7587059e455045"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api/tarball/394b4b88889b22dc33b4e4fe9e7587059e455045",
+  "_shasum": "399f67e3417f8595ab33946b11e3916b36af7da0",
+  "_spec": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api/tarball/394b4b88889b22dc33b4e4fe9e7587059e455045",
+  "_where": "/usr/local/iobroker/node_modules/iobroker.js-controller",
+  "author": {
+    "name": "JauntyJosef",
+    "email": "jauntyjosef@gmail.com"
+  },
+  "bugs": {
+    "url": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {
+    "@iobroker/adapter-core": "^2.4.0",
+    "node-fetch": "^2.6.0"
+  },
+  "deprecated": false,
+  "description": "An adapter to use the Husyvarna API",
+  "devDependencies": {
+    "@iobroker/testing": "^2.2.0",
+    "@types/chai": "^4.2.11",
+    "@types/chai-as-promised": "^7.1.2",
+    "@types/gulp": "^4.0.6",
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^12.12.38",
+    "@types/proxyquire": "^1.3.28",
+    "@types/sinon": "^9.0.0",
+    "@types/sinon-chai": "^3.2.4",
+    "axios": "^0.19.2",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "eslint": "^7.0.0",
+    "gulp": "^4.0.2",
+    "mocha": "^7.1.2",
+    "proxyquire": "^2.1.3",
+    "sinon": "^8.1.1",
+    "sinon-chai": "^3.5.0"
+  },
+  "homepage": "https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api",
+  "keywords": [
+    "ioBroker",
+    "template",
+    "Smart Home",
+    "home automation"
+  ],
+  "license": "MIT",
+  "main": "main.js",
+  "name": "iobroker.husqvarna-automower-api",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JauntyJosef/ioBroker.husqvarna-automower-api.git"
+  },
+  "scripts": {
+    "lint": "eslint",
+    "test": "npm run test:js && npm run test:package",
+    "test:integration": "mocha test/integration --exit",
+    "test:js": "mocha --opts test/mocha.custom.opts",
+    "test:package": "mocha test/package --exit",
+    "test:unit": "mocha test/unit --exit"
+  },
+  "version": "0.1.0"
+}
