@@ -322,7 +322,7 @@ class HusqvarnaAutomowerApi extends utils.Adapter {
 		//Check and/or get new refreshToken and new accessToken
 		const rf_Token =  await this.getStateAsync('keys.refreshToken');
 
-		if (rf_Token.val === null) {
+		if (rf_Token === null) {
 			this.log.info('no refresh token found. Trying to get new one with login data ...');
 			try {
 				await HusqApi.login();
