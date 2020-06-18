@@ -3,10 +3,16 @@
 /*
  * Created with @iobroker/create-adapter v1.24.2
  */
-
+const HusqvarnaApi = require('./lib/HusqvarnaAPI');
 const utils = require('@iobroker/adapter-core');
-const fetch = require('node-fetch');
 const { URLSearchParams } = require('url');
+
+const HusqApi = new HusqvarnaApi();
+
+let start_duration;
+let park_duration;
+let refreshTime;
+let mowerStatus;
 
 
 class HusqvarnaAutomowerApi extends utils.Adapter {
@@ -27,163 +33,26 @@ class HusqvarnaAutomowerApi extends utils.Adapter {
 	}
 
 
+	//OK
+	//Password decryption
+	async decrypt(key, value) {
+		let result = "";
+		for (let i = 0; i < value.length; ++i) {
+			result += String.fromCharCode(key[i % key.length].charCodeAt(0) ^ value.charCodeAt(i));
+		}
+		this.log.info("Password decrypt ready");
+		return result;
+	}
+
 
 	sleep(milliseconds) {
 		return new Promise(resolve => setTimeout(resolve, milliseconds));
 	}
 
 
-	//TODO: timestamp if needed
-	/*gettime() {
-		const date = new Date();
-		const actualTime = date.getTime() - date.getTimezoneOffset() * 60000;
-		return actualTime;
-	}*/
-
-
 	// OK
-	//Login with username and password to get new accessToken and refreshToken
-	async login() {
-		const params = new URLSearchParams();
-		params.set('grant_type', 'password');
-		params.set('client_id', this.config.app_key);
-		params.set('username', this.config.username);
-		params.set('password', this.config.password);
-
-		const res = await fetch('https://api.authentication.husqvarnagroup.dev/v1/oauth2/token', {
-			method: 'POST',
-			body: params
-		});
-
-		if (!res.ok) {
-			this.log.error('Login with username and password FAILED. html status:  ' + res.status + '     text: ' + res.statusText);
-			throw new Error(res.statusText);
-		} else {
-			const result = await res.json();
-			this.log.info('Got new accessToken from API: ' + result.access_token);
-			this.log.info('Got new refreshToken from API: ' + result.refresh_token);
-			return result;
-		}
-
-	};
-
-
-	// OK
-	//login with RefreshToken and get new accessToken
-	async requestNewAccessToken(appKey) {
-		const params = new URLSearchParams();
-		let refreshToken = await this.getStateAsync('keys.refreshToken');
-		refreshToken = refreshToken.val;
-
-		params.set('grant_type', 'refresh_token');
-		params.set('client_id', appKey);
-		params.set('refresh_token', refreshToken);
-
-		const res = await fetch('https://api.authentication.husqvarnagroup.dev/v1/oauth2/token', {
-			method: 'POST',
-			body: params
-		});
-
-		if (!res.ok) {
-			throw new Error(res.statusText);
-			this.log.error("Error logging in with refresh key to get new accessKey: " + res.statusText);
-			//TODO maybe login with username and password
-		}
-		const tk = await res.json();
-		this.log.info('requested new accessToken from API: ' + tk.access_token);
-		await this.setStateAsync('keys.accessToken', {val: tk.access_token, ack: true});
-	}
-
-
-	// OK
-	//call this to get the mower data from the API
-	async requestMowerStatus() {
-			this.log.info('trying to get mower data from API...');
-			let accessToken = await this.getStateAsync('keys.accessToken');
-			accessToken = accessToken.val;
-			let appKey = this.config.app_key;
-			const mowerResponse = await fetch(`https://api.amc.husqvarna.dev/v1/mowers/`, {//+ this.config.mower_ID, { //${mowerId}`, {
-				headers: {
-					'Authorization': `Bearer ${accessToken}`,
-					'X-Api-Key': appKey,
-					'Authorization-Provider': 'husqvarna'
-				}
-			});
-			if (mowerResponse.ok) {
-				this.log.info('requestMowerStatus: htmlstatus ' + mowerResponse.status + '   statustext: ' + mowerResponse.statusText);
-				const json = await mowerResponse.json();
-				let mowerdata = json.data;
-				for (let mower in mowerdata) {
-					await this.extractMowerData(mowerdata[mower], 'mower.' + mower + '.');
-				};
-				this.log.info('mower data request successful');
-			} else {
-				this.log.error('requesting data from API with accessToken FAILED. htmlstatus: ' + mowerResponse.status + '   statustext: ' + mowerResponse.statusText);
-				this.log.error('trying to get new token and repeat request ...');
-				//this.sleep(2000);
-				accessToken = await this.requestNewAccessToken(appKey);
-				await this.setObjectNotExistsAsync('keys.accessToken', {
-					type: 'state',
-					common: {
-						name: 'accessToken',
-						type: 'string',
-						role: 'text'
-					},
-					native: {}
-				});
-				await this.setStateAsync('keys.accessToken', {val: accessToken, ack: true});
-				await this.requestMowerStatus();
-			}
-	}
-
-
-	// OK
-	//Extract mower data and write them to the objects
-	async extractMowerData(obj, indent) {
-		for (const i in obj) {
-			if (Array.isArray(obj[i]) || typeof obj[i] === 'object') {
-				this.extractMowerData(obj[i], indent + i + ".");
-
-			} else {
-				const setObj = await indent;
-				const setStateVal = await obj[i];
-				const type = typeof (setStateVal);
-				await this.setObjectNotExistsAsync(setObj + i, {
-					type: 'state',
-					common: {
-						name: 'name',
-						type: 'string',
-						role: 'text'
-					},
-					native: {}
-				});
-				await this.setStateAsync(setObj + i, {val: setStateVal, ack: true});
-			}
-		}
-	}
-
-
-	//****  TODO ****
-	//Send commands to API
-	async sendCommand(command){
-		//TODO
-	}
-
-
-	async onReady() {
-
-		// OK
-		//reading from config
-		let appKey = this.config.app_key;
-		let refreshTime;
-		let refreshToken;
-		let accessToken;
-
-		this.log.info('starting Husqvarna Automower adapter ...');
-
-
-		// OK
-		//create objects for keys
+	//create objects
+	async createObjects(){
 		await this.setObjectNotExistsAsync('keys.accessToken', {
 			type: 'state',
 			common: {
@@ -204,88 +73,329 @@ class HusqvarnaAutomowerApi extends utils.Adapter {
 			native: {}
 		});
 
-		await this.setObjectNotExistsAsync('commands.activity', {
+		await this.setObjectNotExistsAsync('commands.MowerNumber', {
 			type: 'state',
 			common: {
-				name: 'activity',
-				type: 'string',
-				role: 'text'
+				name: 'Number of the mower for the API',
+				type: 'number',
+				role: 'number'
 			},
 			native: {}
 		});
 
+		await this.setStateAsync('commands.MowerNumber', {val: 0, ack: true});
 
-		// OK
-		//Checking requirements username, password, appKey
-		if (this.config.username === '' || this.config.password === '' || this.config.appKey === '') {
-			this.log.error('Username, password and appKey are required! Quiting Adapter');
-			this.setForeignState('system.adapter.husqvarna-automower-api.0.alive', false);
-			await this.sleep(2000);
-		}
+		await this.setObjectNotExistsAsync('commands.StartDuration', {
+			type: 'state',
+			common: {
+				name: 'Duration for start in hours',
+				type: 'number',
+				role: 'number'
+			},
+			native: {}
+		});
+
+		await this.setObjectNotExistsAsync('commands.ParkDuration', {
+			type: 'state',
+			common: {
+				name: 'Duration for parking in hours',
+				type: 'number',
+				role: 'number'
+			},
+			native: {}
+		});
+
+		await this.setObjectNotExistsAsync('commands.PauseMower', {
+			type: 'state',
+			common: {
+				name: 'Pause mower',
+				//type: 'string',
+				role: 'button'
+			},
+			native: {}
+		});
+
+		await this.setObjectNotExistsAsync('commands.ParkUntilNextSchedule', {
+			type: 'state',
+			common: {
+				name: 'Park mower until next scheduled run',
+				//type: 'string',
+				role: 'button'
+			},
+			native: {}
+		});
+
+		await this.setObjectNotExistsAsync('commands.ParkUntilFurtherNotice', {
+			type: 'state',
+			common: {
+				name: 'Park mower until further notice, overriding schedule',
+				//type: 'string',
+				role: 'button'
+			},
+			native: {}
+		});
+
+		await this.setObjectNotExistsAsync('commands.ParkForDuration', {
+			type: 'state',
+			common: {
+				name: 'Park mower for a duration of time, overriding schedule',
+				//type: 'string',
+				role: 'button'
+			},
+			native: {}
+		});
+
+		await this.setObjectNotExistsAsync('commands.ResumeSchedule', {
+			type: 'state',
+			common: {
+				name: 'Resume mower according to schedule',
+				//type: 'string',
+				role: 'button'
+			},
+			native: {}
+		});
+
+		await this.setObjectNotExistsAsync('commands.StartForDuration', {
+			type: 'state',
+			common: {
+				name: 'Start mower and cut for a duration of time, overriding schedule',
+				//type: 'string',
+				role: 'button'
+			},
+			native: {}
+		});
+
+		await this.setObjectNotExistsAsync('commands.RequestMowerData', {
+			type: 'state',
+			common: {
+				name: 'Request mower data manually',
+				//type: 'string',
+				role: 'button'
+			},
+			native: {}
+		});
+	}
 
 
-		// OK
-		//get and set refreshTime for data request
+	// OK
+	//get and set refreshTime for data request
+	async setStatesFromConfig(){
+
 		if (this.config.refresh_time.replace(/,/g, '.') < 1 ||  this.config.refresh_time === null ){
 			refreshTime = 5*60000;//set to 5 minutes
 			this.log.info('no refresh time for the mower data request was found or is less than 1');
-			this.log.info('refresh time for the mower data is set to 5 minutes');
+			this.log.info('refresh time for the mower data is set to default: 5 minutes');
 		} else {
 			refreshTime= this.config.refresh_time.replace(/,/g, '.') * 60000;
 		}
 
+		// OK
+		//get and set start_duration
+		if (this.config.start_duration === "" || this.config.start_duration === null || this.config.start_duration < 0) {
+			await this.setStateAsync('commands.StartDuration', {val: '3', ack: true});
+			this.log.info('StartDuration is set to default: 3 hours');
+		} else {
+			start_duration = this.config.start_duration;
+			await this.setStateAsync('commands.StartDuration', {val: start_duration, ack: true});
+			this.log.info('StartDuration is set to ' + start_duration  + ' hours');
+		}
 
 		// OK
-		//Checking and getting new refreshToken and new accessToken
-		//TODO: if refreshToken is invalid???
+		//get and set park_duration
+		if (this.config.park_duration === "" || this.config.park_duration === null || this.config.park_duration < 0) {
+			await this.setStateAsync('commands.ParkDuration', {val: '3', ack: true});
+			this.log.info('ParkDuration is set to default: 3 hours');
+		} else {
+			park_duration = this.config.park_duration;
+			await this.setStateAsync('commands.ParkDuration', {val: park_duration, ack: true});
+			this.log.info('ParkDuration is set to ' + park_duration  + ' hours');
+		}
+
+		HusqApi.username = this.config.username;
+		HusqApi.password = this.config.password;
+		HusqApi.appKey = this.config.appKey;
+	}
+
+
+	// OK
+	// request mower data from API and write to object
+	async requestAndWriteMowerData(){
+
+		try {
+			this.log.info('requesting mower data ...');
+			mowerStatus = await HusqApi.requestMowerStatus();
+			for (let mower in mowerStatus.data) {
+				await this.extractMowerDataFromJSON(mowerStatus.data[mower], 'mower.' + mower + '.');
+			}
+			this.log.info('new mower data written in objects');
+		}
+		catch (e) {
+			this.log.info(e.message);
+			this.log.info('requesting new accessToken ...');
+			await HusqApi.requestNewAccessToken();
+			this.log.info('new accessToken: ' + HusqApi.accessToken);
+			await this.setStateAsync('keys.accessToken', {val: HusqApi.accessToken, ack: true});
+
+			this.log.info('requesting mower data ...');
+			mowerStatus = await HusqApi.requestMowerStatus();
+			for (let mower in mowerStatus.data) {
+				await this.extractMowerDataFromJSON(mowerStatus.data[mower], 'mower.' + mower + '.');
+			}
+			this.log.info('requested new mower data');
+			//TODO RF token invalid???
+		}
+	}
+
+
+	// OK
+	//Extract mower data and write them to the objects
+	async extractMowerDataFromJSON(obj, indent) {
+		for (const i in obj) {
+			if (Array.isArray(obj[i]) || typeof obj[i] === 'object') {
+				this.extractMowerDataFromJSON(obj[i], indent + i + ".");
+
+			} else {
+				const setObj = await indent;
+				const setStateVal = await obj[i];
+				const type = typeof (setStateVal);
+				await this.setObjectNotExistsAsync(setObj + i, {
+					type: 'state',
+					common: {
+						name: 'name',
+						type: 'string', //type??
+						role: 'text'
+					},
+					native: {}
+				});
+				await this.setStateAsync(setObj + i, {val: setStateVal, ack: true});
+			}
+		}
+	}
+
+
+	/*
+        //TODO: timestamp if needed
+        async actualTime(){
+            const date = new Date();
+            const actualTime = date.getTime() - date.getTimezoneOffset() * 60000;
+            return actualTime;
+        }
+
+     */
+
+
+	async onReady() {
+
+		this.log.info('starting Husqvarna Automower adapter ...');
+
+		//OK
+		//Decrypt password
+		this.getForeignObject("system.config", (err, obj) => {
+			if (obj && obj.native && obj.native.secret) {
+				//noinspection JSUnresolvedVariable
+				this.config.password = this.decrypt(obj.native.secret, this.config.password);
+			} else {
+				//noinspection JSUnresolvedVariable
+				this.config.password = this.decrypt("Zgfr56gFe87jJOM", this.config.password);
+			}
+		})
+
+
+		// OK
+		//Checking requirements: username, password, appKey
+		if (this.config.username === '' || this.config.password === '' || this.config.appKey === '') {
+			this.log.error('Username, password AND appKey are required! Exiting adapter');
+			this.setForeignState("system.adapter." + this.namespace + ".alive", false); //stop instance
+			this.sleep(2000);
+		}
+
+
+		//Check if objects are existing - if not, create them
+		await this.createObjects();
+
+
+		//read states from config and set objects
+		await this.setStatesFromConfig();
+
+
+		// OK
+		//Check and/or get new refreshToken and new accessToken
 		const rf_Token =  await this.getStateAsync('keys.refreshToken');
-		if (rf_Token === null) {
-			this.log.error('no refresh token found. Trying to get new one ...');
-			let newToken = await this.login();
-			accessToken = newToken.access_token;
-			refreshToken = newToken.refresh_token;
-			await this.setStateAsync('keys.refreshToken', {val: refreshToken, ack: true});
-			await this.setStateAsync('keys.accessToken', {val: accessToken, ack: true});
+
+		if (rf_Token.val === null) {
+			this.log.info('no refresh token found. Trying to get new one with login data ...');
+			try {
+				await HusqApi.login();
+			}
+			catch(e) {
+				this.log.error(e.message);
+				this.log.error('Exiting Adapter! Please check error message!');
+				this.setForeignState("system.adapter." + this.namespace + ".alive", false); //stop instance
+				await this.sleep(2000);
+			}
+
+			await this.setStateAsync('keys.refreshToken', {val: HusqApi.refreshToken, ack: true});
+			this.log.info('new accessToken: '+ HusqApi.accessToken);
+
+			await this.setStateAsync('keys.accessToken', {val: HusqApi.accessToken, ack: true});
+			this.log.info('new refreshToken:' + HusqApi.refreshToken);
+
 			await this.sleep(1000);
 		}
 		else {
-			refreshToken = rf_Token.val;
-			this.log.info('found existing refresh token in objects: ' + refreshToken);
+			HusqApi.refreshToken = rf_Token.val;
+			this.log.info('found existing refresh token in objects: ' + HusqApi.refreshToken);
 		}
 
 
 		// OK
-		//Checking and getting new accessToken
+		//Check and/or get new accessToken
 		const ac_Token = await this.getStateAsync('keys.accessToken');
-		if (ac_Token === null) {
+		if (ac_Token.val === null) {
 			this.log.error('no access token found. Trying to get new one ...');
-			await this.requestNewAccessToken(appKey);
-			await this.sleep(1000);
-			await this.requestMowerStatus();
-			await this.sleep(1000);
-		}
-		else {
-			accessToken = ac_Token.val;
-			this.log.info('found existing access token in objects: ' + accessToken);
-			await this.requestMowerStatus();
-		}
+			try {
+				await HusqApi.requestNewAccessToken();
+			}
+			catch (e) {
+				this.log.info(e.message);
+				this.log.error('Error logging in ...');
+				//TODO what now???? exit? call login() again??
+			}
 
+			await this.setStateAsync('keys.accessToken', {val: HusqApi.accessToken, ack: true});
+			this.log.info('new accessToken: ' + HusqApi.accessToken);
+			await this.sleep(1000);
 
-		// OK *** TODO: check if really unnecessary
-		//Setting timer for requesting accessToken
-		//setInterval(async () => {await this.requestNewAccessToken(appKey)}, 55*60000);
-		//this.log.info('refresh accessToken timer is set to 55 minutes.');
-		// ************************************
+		} else {
+			HusqApi.accessToken = ac_Token.val;
+			this.log.info('found existing access token in objects: ' + HusqApi.accessToken);
+		}
 
 
 		// OK
-		// Getting data from API
-		setInterval(async () => {await this.requestMowerStatus()}, refreshTime);
-		this.log.info('request mower data timer is set to ' + refreshTime/60000 + ' minutes');
+		// request mower data from API and write to objects
+		await this.requestAndWriteMowerData();
 
 
-		// in this template all states changes inside the adapters namespace are subscribed
-		this.subscribeStates('commands.activity');
+		// OK
+		// set interval for periodic data request from API
+		if (this.config.enable_requests) {
+			setInterval(async () => {
+				await this.requestAndWriteMowerData()
+			}, refreshTime);
+			this.log.info('request mower data timer is set to ' + refreshTime / 60000 + ' minutes');
+		} else
+		{
+			setInterval(async () => {
+				await this.requestAndWriteMowerData()
+			}, 1000*3600*24);
+			this.log.info('periodic mower data request ist DISABLED');
+			this.log.info('Connect to API every 24 hours to keep refresh key up to date.');
+		}
+
+
+		// all states changes inside commands object are subscribed
+		this.subscribeStates('commands.*');
 
 	}
 
@@ -309,12 +419,100 @@ class HusqvarnaAutomowerApi extends utils.Adapter {
 	 * @param {string} id
 	 * @param {ioBroker.State | null | undefined} state
 	 */
-	onStateChange(id, state) {
+	async onStateChange(id, state) {
 		if (state) {
-			// The state was changed
-			// same thing, but the state is deleted after 30s (getState will return null afterwards)
-			//await this.setStateAsync('testVariable', { val: true, ack: true, expire: 30 });
-			this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
+			let type ={};
+			let mower = await this.getStateAsync('commands.MowerNumber');
+			mower = Number(mower.val);
+			let mowerId = await this.getStateAsync('mower.' + mower + '.id');
+			mowerId = mowerId.val;
+			let parkDuration = await this.getStateAsync('commands.ParkDuration');
+			parkDuration = Number(parkDuration.val);
+			let startDuration = await this.getStateAsync('commands.StartDuration');
+			startDuration = Number(startDuration.val);
+
+			switch (id) {
+				case this.namespace + ".commands.ParkDuration": //Changes in 'ParkDuration' object will be ignored
+					return;
+				case this.namespace + ".commands.StartDuration": //Changes in 'StartDuration' object will be ignored
+					return;
+				case this.namespace + ".commands.MowerNumber": //Changes in 'MowerNumber' object will be ignored
+					return;
+				case this.namespace + ".commands.PauseMower"://Pause mower
+					type = {
+						data: {
+							type: 'Pause'
+						}
+					};
+					break;
+				case this.namespace + ".commands.ParkUntilNextSchedule": //Park mower until next scheduled run
+					type = {
+						data: {
+							type: 'ParkUntilNextSchedule'
+						}
+					};
+					break;
+				case this.namespace + ".commands.ParkUntilFurtherNotice": //Park mower until further notice, overriding schedule
+					type = {
+						data: {
+							type: 'ParkUntilFurtherNotice'
+						}
+					};
+					break;
+				case this.namespace + ".commands.ParkForDuration": // Park mower for a duration of time, overriding schedule
+					type = {
+						data: {
+							type: 'Park',
+							attributes: {
+								duration: parkDuration
+							}
+						}
+					};
+					break;
+				case this.namespace + ".commands.ResumeSchedule": //Resume mower according to schedule
+					type = {
+						data: {
+							type: 'ResumeSchedule'
+						}
+					};
+					break;
+				case this.namespace * ".commands.StartForDuration": //Start mower and cut for a duration of time, overriding schedule
+					type = {
+						data: {
+							type: 'Start',
+							attributes: {
+								duration: startDuration
+							}
+						}
+					};
+					break;
+				case this.namespace + ".commands.RequestMowerData":
+					await this.requestAndWriteMowerData();
+					return;
+			}
+			try {
+				this.log.info('Sending command to API ... ');
+				let answer = await HusqApi.sendCommand(mowerId, type);
+				this.log.info(answer);
+				//this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
+			}
+			catch (e) {
+				this.log.error(e.message);
+				this.log.info('Trying to get new accessToken ...');
+				try {
+					await HusqApi.requestNewAccessToken();
+					await this.setStateAsync('keys.accessToken', {val: HusqApi.accessToken, ack: true});
+					this.log.info('new accessToken: ' + HusqApi.accessToken);
+					await this.sleep(1000);
+					this.log.info('Sending command to API again ... ');
+					let answer = await HusqApi.sendCommand(mowerId, type);
+					this.log.info(answer);
+				}
+				catch (e) {
+					this.log.info(e.message);
+					this.log.error('Error logging in ...');
+				}
+			}
 		} else {
 			// The state was deleted
 			this.log.info(`state ${id} deleted`);

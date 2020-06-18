@@ -20,6 +20,13 @@ You must sign up at https://developer.1689.cloud to get an API key.
 #
 ## Changelog
 
+### 0.2.0
+Still in testing.
+Sending commands to API is now implemented.
+Password from configuration is now encrypted.
+Various bug fixes.
+
+
 ### 0.1.0
 * (JauntyJosef) first beta release
 It is only possible to request data. Sending commands will be implemented.

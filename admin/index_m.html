@@ -14,90 +14,199 @@
 	<script type="text/javascript" src="../../js/adapter-settings.js"></script>
 
 	<!-- Load our own files -->
-	<link rel="stylesheet" type="text/css" href="style.css" />
+	<!---<link rel="stylesheet" type="text/css" href="style.css" />--->
 	<script type="text/javascript" src="words.js"></script>
 
-	<script type="text/javascript">
-		// This will be called by the admin adapter when the settings page loads
-		function load(settings, onChange) {
-			// example: select elements with id=key and class=value and insert value
-			if (!settings) return;
-			$('.value').each(function () {
-				var $key = $(this);
-				var id = $key.attr('id');
-				if ($key.attr('type') === 'checkbox') {
-					// do not call onChange direct, because onChange could expect some arguments
-					$key.prop('checked', settings[id])
-						.on('change', () => onChange())
-						;
-				} else {
-					// do not call onChange direct, because onChange could expect some arguments
-					$key.val(settings[id])
-						.on('change', () => onChange())
-						.on('keyup', () => onChange())
-						;
-				}
-			});
-			onChange(false);
-			// reinitialize all the Materialize labels on the page if you are dynamically adding inputs:
-			if (M) M.updateTextFields();
-		}
 
-		// This will be called by the admin adapter when the user presses the save button
-		function save(callback) {
-			// example: select elements with class=value and build settings object
-			var obj = {};
-			$('.value').each(function () {
-				var $this = $(this);
-				if ($this.attr('type') === 'checkbox') {
-					obj[$this.attr('id')] = $this.prop('checked');
-				} else {
-					obj[$this.attr('id')] = $this.val();
-				}
-			});
-			callback(obj);
-		}
+	<script type="text/javascript">
+        var secret;
+        function encrypt(key, value) {
+            var result = '';
+            for(var i = 0; i < value.length; ++i) {
+                result += String.fromCharCode(key[i % key.length].charCodeAt(0) ^ value.charCodeAt(i));
+            }
+            return result;
+        }
+        function decrypt(key, value) {
+            var result = '';
+            for(var i = 0; i < value.length; ++i) {
+                result += String.fromCharCode(key[i % key.length].charCodeAt(0) ^ value.charCodeAt(i));
+            }
+            return result;
+        }
+
+        // the function loadSettings has to exist ...
+        function loadHelper(settings, onChange) {
+            // example: select elements with id=key and class=value and insert value
+            if (!settings) return;
+            if (settings.electricityPollingInterval === undefined) settings.electricityPollingInterval = 20;
+            $('.value').each(function () {
+                var $key = $(this);
+                var id = $key.attr('id');
+                if (id === 'password') {
+                    settings[id] = decrypt(secret, settings[id]);
+                }
+                if ($key.attr('type') === 'checkbox') {
+                    // do not call onChange direct, because onChange could expect some arguments
+                    $key.prop('checked', settings[id]).change(function() {
+                        onChange();
+                    });
+                } else {
+                    // do not call onChange direct, because onChange could expect some arguments
+                    $key.val(settings[id]).change(function() {
+                        onChange();
+                    }).keyup(function() {
+                        onChange();
+                    });
+                }
+            });
+            onChange(false);
+            // function Materialize.updateTextFields(); to reinitialize all the Materialize labels on the page if you are dynamically adding inputs.
+            M.updateTextFields();
+        }
+
+
+        // This will be called by the admin adapter when the settings page loads
+        function load(settings, onChange) {
+            socket.emit('getObject', 'system.config', function (err, obj) {
+                secret = (obj.native ? obj.native.secret : '') || 'Zgfr56gFe87jJOM';
+                loadHelper(settings, onChange);
+            });
+            onChange(false);
+        }
+
+        // This will be called by the admin adapter when the user presses the save button
+        function save(callback) {
+            // example: select elements with class=value and build settings object
+            var obj = {};
+            $('.value').each(function () {
+                var $this = $(this);
+                var id = $this.attr('id');
+                if ($this.attr('type') === 'checkbox') {
+                    obj[id] = $this.prop('checked');
+                } else {
+                    var value = $this.val();
+                    if (id === 'password') {
+                        value = encrypt(secret, value);
+                    }
+                    obj[id] = value;
+                }
+            });
+
+            callback(obj);
+        }
 	</script>
 
 </head>
 
 <body>
+<div id="adapter-container">
 
-	<div class="m adapter-container">
+    <table>
+        <tr>
+            <td>
+                <img src="husqvarna-automower-api.png">
+            </td>
+            <td style="padding-top: 20px;padding-left: 10px">
+                <h3 class="translate">Husqvarna Automower API adapter</h3>
+            </td>
+        </tr>
+    </table>
+    <table>
+        <tr>
+            <td>
+                <label></label>
+            </td>
+            <td></td>
+        </tr>
+        <tr>
+            <td colspan="4">
+                <h4 class="translate">API connection settings</h4>
+            </td>
+        </tr>
 
-		<div class="row">
-			<div class="col s12 m4 l2">
-				<img src="husqvarna-automower-api.png" class="logo">
-			</div>
-		</div>
 
-		<!-- Put your content here -->
+        <tr>
+            <td>
+                <label class="translate" for="username">API username:</label>
+            </td>
+            <td>
+                <input id="username" type="text" size="50" class="value"/>
+            </td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>
+                <label class="translate" for="password">API password:</label>
+            </td>
+            <td>
+                <input id="password" type="password" size="50" class="value"/>
+            </td>
+            <td></td>
+        </tr>
 
-		<!-- For example columns with settings: -->
-		<div class="row">
-			<div class="col s6 input-field">
-				<input type="text" class="value" id="username" />
-				<label for="username" class="translate">username</label>
-			</div>
+        <tr>
+            <td>
+                <label class="translate" for="appKey">API key:</label>
+            </td>
+            <td>
+                <input id="appKey" type="text" size="50" class="value"/>
+            </td>
+            <td></td>
+        </tr>
 
-			<div class="col s6 input-field">
-				<input type="text" class="value" id="password" />
-				<label for="password" class="translate">password</label>
-			</div>
+        <tr>
+            <td colspan="5">
+                <br>
+                <h4 class="translate">Additional Settings</h4>
+            </td>
+        </tr>
+		<tr>
+            <td>
+                <label class="translate" for="enable_requests">enable periodic API requests:</label>
+            </td>
+            <td>
+                <input id="enable_requests" type="checkbox" class="value"/>
+            </td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>
+                <label class="translate" for="refresh_time">intervall for API requests (m):</label>
+            </td>
+            <td>
+                <input id="refresh_time" type="number" size="2" class="value" value="5"/>
+            </td>
+            <td></td>
+        </tr>
+		<tr>
+			<td>&nbsp;</td>
+		</tr>
 
-			<div class="col s6 input-field">
-				<input type="text" class="value" id="app_key" />
-				<label for="app_key" class="translate">api key</label>
-			</div>
+        <tr>
+            <td>
+                <label class="translate" for="start_duration">default time for start duration (h):</label>
+            </td>
+            <td>
+                <input id="start_duration" type="number" size="2" class="value"/>
+            </td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>
+                <label class="translate" for="park_duration">default time for park duration (h):</label>
+            </td>
+            <td>
+                <input id="park_duration" type="number" size="2" class="value" value="3"/>
+            </td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+        </tr>
+    </table>
 
-			<div class="col s6 input-field">
-				<input type="text" class="value" id="refresh_time" />
-				<label for="refresh_time" class="translate">refresh time for API request in minutes</label>
-			</div>
-		</div>
-
-	</div>
-
+</div>
 </body>
 
 </html>
