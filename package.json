@@ -32,7 +32,7 @@
   "bundleDependencies": false,
   "dependencies": {
     "@iobroker/adapter-core": "^2.4.0",
-    "node-fetch": "^2.6.0"
+    "node-fetch": "^2.6.7"
   },
   "deprecated": false,
   "description": "An adapter to use the Husyvarna API",
